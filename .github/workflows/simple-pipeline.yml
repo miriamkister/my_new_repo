@@ -1,0 +1,82 @@
+name: Classroom CI-CD Demo 2026
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build_stage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run build
+
+  test_stage:
+    needs: build_stage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests
+        run: npm test
+
+  publish_stage:
+    needs: test_stage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/classroom-api:latest
+            ${{ vars.DOCKERHUB_USERNAME }}/classroom-api:${{ github.sha }}
+
+  deploy_stage:
+    needs: test_stage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Simulate Deploy
+        run: |
+          echo "=== STARTING DEPLOY STAGE ==="
+          echo "Deploying the artifact to Staging environment..."
+          echo "Deployment completed! App is live."
